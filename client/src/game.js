@@ -1,3 +1,5 @@
+import { UPDATE_INTERVAL } from '../../shared/config.mjs';
+
 const ws = new WebSocket('ws://localhost:3000');
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -20,12 +22,16 @@ canvas.addEventListener('mousemove', (e) => {
     // Add viewport offset to mouse coordinates
     mouseX = e.clientX - rect.left + viewport.x;
     mouseY = e.clientY - rect.top + viewport.y;
-    console.log('Mouse moved:', { mouseX, mouseY });
 });
 
 let myPlayerId = null;
 let gameState = { players: [], objects: [], xMax: 3000, yMax: 2000 };
+let previousGameState = null;
+let lastUpdateTime = Date.now();
 let viewport = { x: 0, y: 0, width: window.innerWidth, height: window.innerHeight };
+
+// Interpolation settings
+const INTERPOLATION_DURATION = UPDATE_INTERVAL; // Match server's broadcast interval
 
 // Handle window resizing
 window.addEventListener('resize', () => {
@@ -52,9 +58,13 @@ ws.onmessage = (event) => {
         myPlayerId = data.player_id;
         statusDiv.textContent = `Playing as: ${myPlayerId}`;
     } else if (data.type === 'gameState') {
-        console.log('Received game state:', data);
+        previousGameState = gameState;
         gameState = data;
-        drawGame();
+        lastUpdateTime = Date.now();
+        // Ensure first update has smooth start
+        if (!previousGameState) {
+            previousGameState = JSON.parse(JSON.stringify(gameState));
+        }
     }
 };
 
@@ -63,8 +73,8 @@ ws.onclose = () => {
 };
 
 // Game rendering
-function updateViewport() {
-    const player = gameState.players.find(p => p.player_id === myPlayerId);
+function updateViewport(interpolatedPlayer) {
+    const player = interpolatedPlayer || gameState.players.find(p => p.player_id === myPlayerId);
     if (!player) return;
 
     // Calculate target viewport position (centered on player)
@@ -76,11 +86,41 @@ function updateViewport() {
     viewport.y = Math.max(0, Math.min(targetY, gameState.yMax - viewport.height));
 }
 
+// Interpolate between two values
+function lerp(start, end, t) {
+    return start + (end - start) * t;
+}
+
+// Get interpolated position for an object
+function getInterpolatedPosition(current, previous) {
+    if (!previous) return current;
+
+    const timeSinceUpdate = Date.now() - lastUpdateTime;
+    const t = Math.min(timeSinceUpdate / INTERPOLATION_DURATION, 1);
+
+    return {
+        x: lerp(previous.x, current.x, t),
+        y: lerp(previous.y, current.y, t),
+        size: current.size // Don't interpolate size
+    };
+}
+
 function drawGame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Update viewport position
-    updateViewport();
+    // Update viewport position using interpolated player position
+    if (previousGameState) {
+        const currentPlayer = gameState.players.find(p => p.player_id === myPlayerId);
+        const previousPlayer = previousGameState.players.find(p => p.player_id === myPlayerId);
+        if (currentPlayer && previousPlayer) {
+            const interpolatedPlayer = getInterpolatedPosition(currentPlayer, previousPlayer);
+            updateViewport(interpolatedPlayer);
+        } else {
+            updateViewport();
+        }
+    } else {
+        updateViewport();
+    }
 
     // Save context state
     ctx.save();
@@ -89,43 +129,61 @@ function drawGame() {
     ctx.translate(-viewport.x, -viewport.y);
     
     // Draw game objects that are in or near the viewport
-    gameState.objects?.forEach(obj => {
-        if (isInViewport(obj.x, obj.y)) {
-            ctx.font = `${obj.size * 20}px Arial`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(obj.emoji, obj.x, obj.y);
-        }
-    });
-
-    // Draw players
-    gameState.players.forEach(player => {
-        if (isInViewport(player.x, player.y)) {
-            // Set font size based on player size
-            const fontSize = player.size * 20;
-            ctx.font = `${fontSize}px Arial`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            
-            // Draw the emoji
-            ctx.fillText('🕳️', player.x, player.y);
-            
-            // Draw player ID above the emoji
-            ctx.fillStyle = '#000';
-            ctx.font = '12px Arial';
-            if(myPlayerId === player.player_id && myPlayerId) {
-                ctx.fillText("YOU", player.x, player.y - (fontSize / 2 + 10));
-            } else {
-                ctx.fillText(player.player_id, player.x, player.y - (fontSize / 2 + 10));
+    if (gameState.objects && previousGameState?.objects) {
+        gameState.objects.forEach((obj, index) => {
+            const prevObj = previousGameState.objects[index];
+            if (prevObj && isInViewport(obj.x, obj.y)) {
+                const interpolated = getInterpolatedPosition(obj, prevObj);
+                ctx.font = `${obj.size * 20}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(obj.emoji, interpolated.x, interpolated.y);
             }
-        }
-    });
+        });
+    }
+
+    // Draw players with interpolation
+    if (gameState.players && previousGameState?.players) {
+        gameState.players.forEach(player => {
+            const prevPlayer = previousGameState.players.find(p => p.player_id === player.player_id);
+            if (prevPlayer && isInViewport(player.x, player.y)) {
+                const interpolated = getInterpolatedPosition(player, prevPlayer);
+                
+                // Set font size based on player size
+                const fontSize = player.size * 20;
+                ctx.font = `${fontSize}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Draw the emoji
+                ctx.fillText('🕳️', interpolated.x, interpolated.y);
+                
+                // Draw player ID above the emoji
+                ctx.fillStyle = '#000';
+                ctx.font = '12px Arial';
+                if(myPlayerId === player.player_id && myPlayerId) {
+                    ctx.fillText("YOU", interpolated.x, interpolated.y - (fontSize / 2 + 10));
+                } else {
+                    ctx.fillText(player.player_id, interpolated.x, interpolated.y - (fontSize / 2 + 10));
+                }
+            }
+        });
+    }
 
     // Restore context state
     ctx.restore();
 }
 
-// Update loop
+// Animation frame loop
+function animate() {
+    drawGame();
+    requestAnimationFrame(animate);
+}
+
+// Start animation loop
+animate();
+
+// Update loop for sending position updates
 setInterval(() => {
     if (myPlayerId) {
         // Find my current position
@@ -145,7 +203,6 @@ setInterval(() => {
                 speed: speed,
                 time: Date.now()
             };
-            console.log('Sending update:', update);
             ws.send(JSON.stringify(update));
         }
     }

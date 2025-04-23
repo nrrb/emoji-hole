@@ -3,6 +3,7 @@ const http = require('http');
 const WebSocket = require('ws');
 const { generateId } = require('zoo-ids');
 const GameBoard = require('./GameBoard');
+const { UPDATE_INTERVAL } = require('../../shared/config.js');
 
 const app = express();
 const server = http.createServer(app);
@@ -22,23 +23,15 @@ wss.on('connection', (ws) => {
             if (data.type === 'update') {
                 // Handle player position updates
                 const { player_id, angle, speed, time } = data;
-                console.log('Received update:', { player_id, angle, speed, time });
                 
                 // Calculate new position
                 const deltaTime = (Date.now() - time) / 1000; // Convert to seconds
-                const distance = 10 *speed * deltaTime;
+                const distance = 50 *speed * deltaTime;
                 const currentPos = gameBoard.players.get(player_id);
                 const updates = {
                     x: currentPos.x + Math.cos(angle) * distance,
                     y: currentPos.y + Math.sin(angle) * distance
                 };
-                
-                console.log('Updating player position:', {
-                    from: { x: currentPos.x, y: currentPos.y },
-                    to: updates,
-                    deltaTime,
-                    distance
-                });
                 
                 // Update player position
                 gameBoard.updatePlayer(player_id, updates);
@@ -94,7 +87,7 @@ wss.on('connection', (ws) => {
 
 // Broadcast throttling
 let broadcastQueued = false;
-const BROADCAST_INTERVAL = 500; // ms between broadcasts
+const BROADCAST_INTERVAL = UPDATE_INTERVAL; // ms between broadcasts
 
 // Queue a broadcast if one isn't already queued
 function queueBroadcast() {
@@ -110,7 +103,6 @@ function queueBroadcast() {
 // Broadcast game state to all connected clients
 function broadcastGameState() {
     const gameState = gameBoard.getState();
-    console.log('Broadcasting game state');
     
     const message = JSON.stringify({
         type: 'gameState',
