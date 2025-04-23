@@ -13,41 +13,27 @@ class GameBoard {
     initializeObjects() {
         // Clear existing objects
         this.objects = [];
-        console.log('Initializing objects...')
+        console.log('Initializing objects...');
 
-        // Helper function to get random objects from a group
-        const getRandomObjectsFromGroup = (group, count) => {
-            const objects = [];
-            for (let i = 0; i < count; i++) {
-                const emoji = group.emojis[Math.floor(Math.random() * group.emojis.length)];
-                objects.push({
-                    x: Math.random() * this.xMax,
-                    y: Math.random() * this.yMax,
-                    size: emoji.sizeValue || 1,
-                    class: group.groupName,
-                    emoji: emoji.emoji,
-                    effect: emoji.effect,
-                    ...emoji // Spread other properties like damageValue, duration, etc.
-                });
-            }
-            return objects;
-        };
-
-        // Distribute 100 objects across different types
-        const distribution = {
-            BASIC_FOOD: 40,
-            SPECIAL_FOOD: 30,
-            HAZARDS: 20,
-            POWERUPS: 10
-        };
-
-        // Create objects for each type based on distribution
-        Object.entries(distribution).forEach(([type, count]) => {
-            if (EmojiTypes[type]) {
-                this.objects.push(...getRandomObjectsFromGroup(EmojiTypes[type], count));
-                console.log(`Created ${count} ${type} objects`)
-            }
-        });
+        // Get spawnable emojis based on initial player size (1.0)
+        const spawnableEmojis = EmojiUtils.getSpawnableEmojis(1.0);
+        
+        // Create 20 random objects from the spawnable emojis
+        const totalObjects = 20;
+        
+        for (let i = 0; i < totalObjects; i++) {
+            const emoji = spawnableEmojis[Math.floor(Math.random() * spawnableEmojis.length)];
+            this.objects.push({
+                x: Math.random() * this.xMax,
+                y: Math.random() * this.yMax,
+                size: emoji.sizeValue,
+                class: emoji.name,
+                emoji: emoji.emoji,
+                points: emoji.points
+            });
+        }
+        
+        console.log(`Created ${this.objects.length} objects`);
     }
 
     // Get current game state including both objects and players

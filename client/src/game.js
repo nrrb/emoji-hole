@@ -46,6 +46,7 @@ function drawGame() {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(obj.emoji, obj.x, obj.y);
+        console.log(obj)
     });
 
     // Draw players
