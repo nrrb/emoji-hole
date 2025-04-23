@@ -4,6 +4,9 @@
   "main": "server/src/server.js",
   "scripts": {
     "start": "node server/src/server.js",
+    "dev:client": "vite client/src --port 8080",
+    "dev:server": "node server/src/server.js",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -15,5 +18,9 @@
     "nanoid": "^5.1.5",
     "ws": "^8.18.1",
     "zoo-ids": "^2.0.7"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "vite": "^6.3.2"
   }
 }
