@@ -35,17 +35,19 @@ function drawGame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     gameState.players.forEach(player => {
-        ctx.beginPath();
-        ctx.arc(player.x, player.y, player.size * 10, 0, Math.PI * 2);
-        ctx.fillStyle = player.player_id === myPlayerId ? '#0088ff' : '#ff0000';
-        ctx.fill();
-        ctx.stroke();
+        // Set font size based on player size
+        const fontSize = player.size * 20;
+        ctx.font = `${fontSize}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         
-        // Draw player ID above the circle
+        // Draw the emoji
+        ctx.fillText('🕳️', player.x, player.y);
+        
+        // Draw player ID above the emoji
         ctx.fillStyle = '#000';
         ctx.font = '12px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(player.player_id, player.x, player.y - 15);
+        ctx.fillText(player.player_id, player.x, player.y - (fontSize / 2 + 10));
     });
 }
 
