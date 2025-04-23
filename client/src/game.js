@@ -6,7 +6,7 @@ const speedInput = document.getElementById('speed');
 const angleInput = document.getElementById('angle');
 
 let myPlayerId = null;
-let gameState = { players: [] };
+let gameState = { players: [], objects: [], xMax: 800, yMax: 600 };
 
 // WebSocket message handling
 ws.onopen = () => {
@@ -32,8 +32,23 @@ ws.onclose = () => {
 
 // Game rendering
 function drawGame() {
+    // Update canvas size if needed
+    if (canvas.width !== gameState.xMax || canvas.height !== gameState.yMax) {
+        canvas.width = gameState.xMax;
+        canvas.height = gameState.yMax;
+    }
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
+    // Draw game objects
+    gameState.objects?.forEach(obj => {
+        ctx.font = `${obj.size * 20}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(obj.emoji, obj.x, obj.y);
+    });
+
+    // Draw players
     gameState.players.forEach(player => {
         // Set font size based on player size
         const fontSize = player.size * 20;

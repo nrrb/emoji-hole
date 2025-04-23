@@ -2,13 +2,14 @@ const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const { nanoid } = require('nanoid');
+const GameBoard = require('./GameBoard');
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Game state storage
-const players = new Map();
+// Initialize game board
+const gameBoard = new GameBoard(800, 600);
 
 // WebSocket connection handler
 wss.on('connection', (ws) => {
@@ -21,30 +22,33 @@ wss.on('connection', (ws) => {
             if (data.type === 'update') {
                 // Handle player position updates
                 const { player_id, angle, speed, time } = data;
-                const player = players.get(player_id);
+                // Calculate new position
+                const deltaTime = (Date.now() - time) / 1000; // Convert to seconds
+                const distance = speed * deltaTime;
+                const updates = {
+                    x: gameBoard.players.get(player_id).x + Math.cos(angle) * distance,
+                    y: gameBoard.players.get(player_id).y + Math.sin(angle) * distance
+                };
                 
-                if (player) {
-                    // Simple physics update based on angle and speed
-                    const deltaTime = (Date.now() - time) / 1000; // Convert to seconds
-                    const distance = speed * deltaTime;
-                    
-                    player.x += Math.cos(angle) * distance;
-                    player.y += Math.sin(angle) * distance;
-                    
-                    // Broadcast updated positions to all clients
-                    broadcastGameState();
-                }
+                // Update player position
+                gameBoard.updatePlayer(player_id, updates);
+                
+                // Broadcast updated positions to all clients
+                broadcastGameState();
             } else if (data.type === 'join') {
                 // Generate a new unique player ID
                 const player_id = nanoid(8); // 8-character unique ID
                 
                 // Create new player with generated ID
-                players.set(player_id, {
+                const newPlayer = {
                     player_id,
-                    x: Math.random() * 800, // Random starting position
-                    y: Math.random() * 600,
+                    x: Math.random() * gameBoard.xMax,
+                    y: Math.random() * gameBoard.yMax,
                     size: 1 // Default size
-                });
+                };
+                
+                // Add player to game board
+                gameBoard.addPlayer(newPlayer);
                 
                 // Send the player their ID
                 ws.send(JSON.stringify({
@@ -66,7 +70,7 @@ wss.on('connection', (ws) => {
         console.log('Client disconnected');
         // Remove player from game state when they disconnect
         if (ws.player_id) {
-            players.delete(ws.player_id);
+            gameBoard.removePlayer(ws.player_id);
             broadcastGameState();
         }
     });
@@ -74,7 +78,7 @@ wss.on('connection', (ws) => {
     // Send initial game state to the new client
     ws.send(JSON.stringify({
         type: 'gameState',
-        players: Array.from(players.values())
+        ...gameBoard.getState()
     }));
 });
 
@@ -82,7 +86,7 @@ wss.on('connection', (ws) => {
 function broadcastGameState() {
     const gameState = {
         type: 'gameState',
-        players: Array.from(players.values())
+        ...gameBoard.getState()
     };
     
     wss.clients.forEach((client) => {
