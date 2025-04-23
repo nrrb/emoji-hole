@@ -62,7 +62,11 @@ function drawGame() {
         // Draw player ID above the emoji
         ctx.fillStyle = '#000';
         ctx.font = '12px Arial';
-        ctx.fillText(player.player_id, player.x, player.y - (fontSize / 2 + 10));
+        if(myPlayerId === player.player_id  && myPlayerId) {
+            ctx.fillText("YOU", player.x, player.y - (fontSize / 2 + 10));
+        } else {
+            ctx.fillText(player.player_id, player.x, player.y - (fontSize / 2 + 10));
+        }
     });
 }
 
