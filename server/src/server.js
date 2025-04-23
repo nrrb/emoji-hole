@@ -1,7 +1,7 @@
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
-const { nanoid } = require('nanoid');
+const { generateId } = require('zoo-ids');
 const GameBoard = require('./GameBoard');
 
 const app = express();
@@ -36,8 +36,8 @@ wss.on('connection', (ws) => {
                 // Broadcast updated positions to all clients
                 broadcastGameState();
             } else if (data.type === 'join') {
-                // Generate a new unique player ID
-                const player_id = nanoid(8); // 8-character unique ID
+                // Generate a new silly unique player ID
+                const player_id = generateId('dogs are literal angels');
                 
                 // Create new player with generated ID
                 const newPlayer = {
