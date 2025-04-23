@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Client</title>
+    <style>
+        canvas {
+            border: 1px solid #000;
+            background: #f0f0f0;
+        }
+        #controls {
+            margin: 10px 0;
+        }
+        #status {
+            margin: 10px 0;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        Speed: <input type="range" id="speed" min="0" max="100" value="50">
+        Angle: <input type="range" id="angle" min="0" max="360" value="0">
+    </div>
+    <div id="status">Connecting...</div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <script src="game.js"></script>
+</body>
+</html>
