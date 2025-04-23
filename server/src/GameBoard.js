@@ -118,7 +118,7 @@ class GameBoard {
             if (this.checkCollision(player, obj)) {
                 if(player.size > obj.size) {
                     // Increase player size
-                    player.size += obj.size;
+                    player.size += 0.1 * obj.size;
                     
                     // Remove the collected object
                     this.objects.splice(i, 1);

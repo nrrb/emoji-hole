@@ -209,39 +209,6 @@ const EmojiUtils = {
     return consumable;
   },
   
-  // Get next size threshold the player needs to reach
-  getNextSizeThreshold(currentPlayerSize) {
-    let nextThreshold = null;
-    let smallestDifference = Infinity;
-    
-    Object.values(EmojiTypes).forEach(group => {
-      if (group.minSizeToConsume && group.minSizeToConsume > currentPlayerSize) {
-        const difference = group.minSizeToConsume - currentPlayerSize;
-        if (difference < smallestDifference) {
-          smallestDifference = difference;
-          nextThreshold = {
-            size: group.minSizeToConsume,
-            groupName: group.groupName
-          };
-        }
-      }
-    });
-    
-    return nextThreshold;
-  },
-  
-  // Calculate growth after consuming an emoji
-  calculateGrowth(playerSize, consumedEmoji) {
-    // Base growth formula for regular emojis
-    const baseGrowth = consumedEmoji.sizeValue * 0.05;
-    
-    // Smaller emojis relative to player size give less growth
-    const sizeRatio = consumedEmoji.sizeValue / playerSize;
-    const adjustedGrowth = baseGrowth * (0.5 + sizeRatio);
-    
-    return Math.min(adjustedGrowth, 1.0); // Cap growth per single emoji
-  },
-  
   // Get all emojis that should be spawned at the current level
   getSpawnableEmojis(playerSize) {
     const spawnable = [];

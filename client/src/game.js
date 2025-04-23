@@ -132,10 +132,18 @@ function drawGame() {
     if (gameState.objects) {
         gameState.objects.forEach(obj => {
             if (isInViewport(obj.x, obj.y)) {
-                ctx.font = `${obj.size * 20}px Arial`;
+                const objFontSize = obj.size * 20;
+                ctx.font = `${objFontSize}px Arial`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
+                
+                // Draw the emoji
                 ctx.fillText(obj.emoji, obj.x, obj.y);
+                
+                // Draw object info above the emoji
+                ctx.fillStyle = '#000';
+                ctx.font = '12px Arial';
+                ctx.fillText(`${obj.class} (${obj.size.toFixed(1)})`, obj.x, obj.y - (objFontSize / 2 + 10));
             }
         });
     }
@@ -156,14 +164,11 @@ function drawGame() {
                 // Draw the emoji
                 ctx.fillText('🕳️', interpolated.x, interpolated.y);
                 
-                // Draw player ID above the emoji
+                // Draw player info above the emoji
                 ctx.fillStyle = '#000';
                 ctx.font = '12px Arial';
-                if(myPlayerId === player.player_id && myPlayerId) {
-                    ctx.fillText("YOU", interpolated.x, interpolated.y - (fontSize / 2 + 10));
-                } else {
-                    ctx.fillText(player.player_id, interpolated.x, interpolated.y - (fontSize / 2 + 10));
-                }
+                const displayName = myPlayerId === player.player_id && myPlayerId ? "YOU" : player.player_id;
+                ctx.fillText(`${displayName} (${player.size.toFixed(1)})`, interpolated.x, interpolated.y - (fontSize / 2 + 10));
             }
         });
     }
