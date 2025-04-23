@@ -129,15 +129,13 @@ function drawGame() {
     ctx.translate(-viewport.x, -viewport.y);
     
     // Draw game objects that are in or near the viewport
-    if (gameState.objects && previousGameState?.objects) {
-        gameState.objects.forEach((obj, index) => {
-            const prevObj = previousGameState.objects[index];
-            if (prevObj && isInViewport(obj.x, obj.y)) {
-                const interpolated = getInterpolatedPosition(obj, prevObj);
+    if (gameState.objects) {
+        gameState.objects.forEach(obj => {
+            if (isInViewport(obj.x, obj.y)) {
                 ctx.font = `${obj.size * 20}px Arial`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(obj.emoji, interpolated.x, interpolated.y);
+                ctx.fillText(obj.emoji, obj.x, obj.y);
             }
         });
     }
@@ -201,7 +199,13 @@ setInterval(() => {
                 player_id: myPlayerId,
                 angle: angle,
                 speed: speed,
-                time: Date.now()
+                time: Date.now(),
+                viewport: {
+                    x: viewport.x,
+                    y: viewport.y,
+                    width: viewport.width,
+                    height: viewport.height
+                }
             };
             ws.send(JSON.stringify(update));
         }

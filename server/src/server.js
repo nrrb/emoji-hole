@@ -24,9 +24,9 @@ wss.on('connection', (ws) => {
                 // Handle player position updates
                 const { player_id, angle, speed, time } = data;
                 
-                // Calculate new position
+                // Calculate new position with speed limit
                 const deltaTime = (Date.now() - time) / 1000; // Convert to seconds
-                const distance = 50 *speed * deltaTime;
+                const distance = Math.min(50 * speed * deltaTime, 50);
                 const currentPos = gameBoard.players.get(player_id);
                 const updates = {
                     x: currentPos.x + Math.cos(angle) * distance,
@@ -37,7 +37,7 @@ wss.on('connection', (ws) => {
                 gameBoard.updatePlayer(player_id, updates);
                 
                 // Queue broadcast if not already queued
-                queueBroadcast();
+                queueBroadcast(data.viewport);
             } else if (data.type === 'join') {
                 // Generate a new silly unique player ID
                 const player_id = generateId('dogs are literal angels');
@@ -90,19 +90,19 @@ let broadcastQueued = false;
 const BROADCAST_INTERVAL = UPDATE_INTERVAL; // ms between broadcasts
 
 // Queue a broadcast if one isn't already queued
-function queueBroadcast() {
+function queueBroadcast(viewport) {
     if (!broadcastQueued) {
         broadcastQueued = true;
         setTimeout(() => {
-            broadcastGameState();
+            broadcastGameState(viewport);
             broadcastQueued = false;
         }, BROADCAST_INTERVAL);
     }
 }
 
 // Broadcast game state to all connected clients
-function broadcastGameState() {
-    const gameState = gameBoard.getState();
+function broadcastGameState(viewport) {
+    const gameState = gameBoard.getState(viewport);
     
     const message = JSON.stringify({
         type: 'gameState',
