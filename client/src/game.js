@@ -128,27 +128,7 @@ function drawGame() {
     // Translate context to implement viewport scrolling
     ctx.translate(-viewport.x, -viewport.y);
     
-    // Draw game objects that are in or near the viewport
-    if (gameState.objects) {
-        gameState.objects.forEach(obj => {
-            if (isInViewport(obj.x, obj.y)) {
-                const objFontSize = obj.size * 20;
-                ctx.font = `${objFontSize}px Arial`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                
-                // Draw the emoji
-                ctx.fillText(obj.emoji, obj.x, obj.y);
-                
-                // Draw object info above the emoji
-                ctx.fillStyle = '#000';
-                ctx.font = '12px Arial';
-                ctx.fillText(`${obj.class} (${obj.size.toFixed(1)})`, obj.x, obj.y - (objFontSize / 2 + 10));
-            }
-        });
-    }
-
-    // Draw players with interpolation
+    // Draw players with interpolation first (so they appear behind objects)
     if (gameState.players && previousGameState?.players) {
         gameState.players.forEach(player => {
             const prevPlayer = previousGameState.players.find(p => p.player_id === player.player_id);
@@ -169,6 +149,26 @@ function drawGame() {
                 ctx.font = '12px Arial';
                 const displayName = myPlayerId === player.player_id && myPlayerId ? "YOU" : player.player_id;
                 ctx.fillText(`${displayName} (${player.size.toFixed(1)})`, interpolated.x, interpolated.y - (fontSize / 2 + 10));
+            }
+        });
+    }
+
+    // Draw game objects that are in or near the viewport (on top of players)
+    if (gameState.objects) {
+        gameState.objects.forEach(obj => {
+            if (isInViewport(obj.x, obj.y)) {
+                const objFontSize = obj.size * 20;
+                ctx.font = `${objFontSize}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Draw the emoji
+                ctx.fillText(obj.emoji, obj.x, obj.y);
+                
+                // Draw object info above the emoji
+                ctx.fillStyle = '#000';
+                ctx.font = '12px Arial';
+                ctx.fillText(`${obj.class} (${obj.size.toFixed(1)})`, obj.x, obj.y - (objFontSize / 2 + 10));
             }
         });
     }
