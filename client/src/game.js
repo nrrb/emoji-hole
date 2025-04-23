@@ -6,15 +6,38 @@ let mouseX = 0;
 let mouseY = 0;
 
 // Track mouse movement
+// Helper function to check if a point is in or near the viewport
+function isInViewport(x, y) {
+    const margin = 100; // Draw slightly outside viewport for smooth scrolling
+    return x >= viewport.x - margin &&
+           x <= viewport.x + viewport.width + margin &&
+           y >= viewport.y - margin &&
+           y <= viewport.y + viewport.height + margin;
+}
+
 canvas.addEventListener('mousemove', (e) => {
     const rect = canvas.getBoundingClientRect();
-    mouseX = e.clientX - rect.left;
-    mouseY = e.clientY - rect.top;
+    // Add viewport offset to mouse coordinates
+    mouseX = e.clientX - rect.left + viewport.x;
+    mouseY = e.clientY - rect.top + viewport.y;
     console.log('Mouse moved:', { mouseX, mouseY });
 });
 
 let myPlayerId = null;
-let gameState = { players: [], objects: [], xMax: 800, yMax: 600 };
+let gameState = { players: [], objects: [], xMax: 3000, yMax: 2000 };
+let viewport = { x: 0, y: 0, width: window.innerWidth, height: window.innerHeight };
+
+// Handle window resizing
+window.addEventListener('resize', () => {
+    viewport.width = window.innerWidth;
+    viewport.height = window.innerHeight;
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+});
+
+// Initial canvas size
+canvas.width = viewport.width;
+canvas.height = viewport.height;
 
 // WebSocket message handling
 ws.onopen = () => {
@@ -40,43 +63,66 @@ ws.onclose = () => {
 };
 
 // Game rendering
-function drawGame() {
-    // Update canvas size if needed
-    if (canvas.width !== gameState.xMax || canvas.height !== gameState.yMax) {
-        canvas.width = gameState.xMax;
-        canvas.height = gameState.yMax;
-    }
+function updateViewport() {
+    const player = gameState.players.find(p => p.player_id === myPlayerId);
+    if (!player) return;
 
+    // Calculate target viewport position (centered on player)
+    const targetX = player.x - viewport.width / 2;
+    const targetY = player.y - viewport.height / 2;
+
+    // Clamp viewport to game bounds
+    viewport.x = Math.max(0, Math.min(targetX, gameState.xMax - viewport.width));
+    viewport.y = Math.max(0, Math.min(targetY, gameState.yMax - viewport.height));
+}
+
+function drawGame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Draw game objects
+    // Update viewport position
+    updateViewport();
+
+    // Save context state
+    ctx.save();
+    
+    // Translate context to implement viewport scrolling
+    ctx.translate(-viewport.x, -viewport.y);
+    
+    // Draw game objects that are in or near the viewport
     gameState.objects?.forEach(obj => {
-        ctx.font = `${obj.size * 20}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(obj.emoji, obj.x, obj.y);
+        if (isInViewport(obj.x, obj.y)) {
+            ctx.font = `${obj.size * 20}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(obj.emoji, obj.x, obj.y);
+        }
     });
 
     // Draw players
     gameState.players.forEach(player => {
-        // Set font size based on player size
-        const fontSize = player.size * 20;
-        ctx.font = `${fontSize}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        // Draw the emoji
-        ctx.fillText('🕳️', player.x, player.y);
-        
-        // Draw player ID above the emoji
-        ctx.fillStyle = '#000';
-        ctx.font = '12px Arial';
-        if(myPlayerId === player.player_id  && myPlayerId) {
-            ctx.fillText("YOU", player.x, player.y - (fontSize / 2 + 10));
-        } else {
-            ctx.fillText(player.player_id, player.x, player.y - (fontSize / 2 + 10));
+        if (isInViewport(player.x, player.y)) {
+            // Set font size based on player size
+            const fontSize = player.size * 20;
+            ctx.font = `${fontSize}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Draw the emoji
+            ctx.fillText('🕳️', player.x, player.y);
+            
+            // Draw player ID above the emoji
+            ctx.fillStyle = '#000';
+            ctx.font = '12px Arial';
+            if(myPlayerId === player.player_id && myPlayerId) {
+                ctx.fillText("YOU", player.x, player.y - (fontSize / 2 + 10));
+            } else {
+                ctx.fillText(player.player_id, player.x, player.y - (fontSize / 2 + 10));
+            }
         }
     });
+
+    // Restore context state
+    ctx.restore();
 }
 
 // Update loop

@@ -9,7 +9,7 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 // Initialize game board
-const gameBoard = new GameBoard(800, 600);
+const gameBoard = new GameBoard(3000, 2000); // Much larger game board
 
 // WebSocket connection handler
 wss.on('connection', (ws) => {
