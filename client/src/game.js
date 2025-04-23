@@ -2,8 +2,16 @@ const ws = new WebSocket('ws://localhost:3000');
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const statusDiv = document.getElementById('status');
-const speedInput = document.getElementById('speed');
-const angleInput = document.getElementById('angle');
+let mouseX = 0;
+let mouseY = 0;
+
+// Track mouse movement
+canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
+    console.log('Mouse moved:', { mouseX, mouseY });
+});
 
 let myPlayerId = null;
 let gameState = { players: [], objects: [], xMax: 800, yMax: 600 };
@@ -21,6 +29,7 @@ ws.onmessage = (event) => {
         myPlayerId = data.player_id;
         statusDiv.textContent = `Playing as: ${myPlayerId}`;
     } else if (data.type === 'gameState') {
+        console.log('Received game state:', data);
         gameState = data;
         drawGame();
     }
@@ -46,7 +55,6 @@ function drawGame() {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(obj.emoji, obj.x, obj.y);
-        console.log(obj)
     });
 
     // Draw players
@@ -74,12 +82,25 @@ function drawGame() {
 // Update loop
 setInterval(() => {
     if (myPlayerId) {
-        ws.send(JSON.stringify({
-            type: 'update',
-            player_id: myPlayerId,
-            angle: (parseInt(angleInput.value) * Math.PI) / 180,
-            speed: parseInt(speedInput.value) / 10,
-            time: Date.now()
-        }));
+        // Find my current position
+        const player = gameState.players.find(p => p.player_id === myPlayerId);
+        if (player) {
+            // Calculate angle and speed based on mouse position
+            const dx = mouseX - player.x;
+            const dy = mouseY - player.y;
+            const angle = Math.atan2(dy, dx);
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const speed = distance;
+            
+            const update = {
+                type: 'update',
+                player_id: myPlayerId,
+                angle: angle,
+                speed: speed,
+                time: Date.now()
+            };
+            console.log('Sending update:', update);
+            ws.send(JSON.stringify(update));
+        }
     }
 }, 50); // Send updates every 50ms

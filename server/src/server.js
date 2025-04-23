@@ -22,13 +22,23 @@ wss.on('connection', (ws) => {
             if (data.type === 'update') {
                 // Handle player position updates
                 const { player_id, angle, speed, time } = data;
+                console.log('Received update:', { player_id, angle, speed, time });
+                
                 // Calculate new position
                 const deltaTime = (Date.now() - time) / 1000; // Convert to seconds
-                const distance = speed * deltaTime;
+                const distance = 10 *speed * deltaTime;
+                const currentPos = gameBoard.players.get(player_id);
                 const updates = {
-                    x: gameBoard.players.get(player_id).x + Math.cos(angle) * distance,
-                    y: gameBoard.players.get(player_id).y + Math.sin(angle) * distance
+                    x: currentPos.x + Math.cos(angle) * distance,
+                    y: currentPos.y + Math.sin(angle) * distance
                 };
+                
+                console.log('Updating player position:', {
+                    from: { x: currentPos.x, y: currentPos.y },
+                    to: updates,
+                    deltaTime,
+                    distance
+                });
                 
                 // Update player position
                 gameBoard.updatePlayer(player_id, updates);
@@ -84,14 +94,17 @@ wss.on('connection', (ws) => {
 
 // Broadcast game state to all connected clients
 function broadcastGameState() {
-    const gameState = {
+    const gameState = gameBoard.getState();
+    console.log('Broadcasting game state:', gameState);
+    
+    const message = JSON.stringify({
         type: 'gameState',
-        ...gameBoard.getState()
-    };
+        ...gameState
+    });
     
     wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(gameState));
+            client.send(message);
         }
     });
 }
