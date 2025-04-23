@@ -1,6 +1,7 @@
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
+const { nanoid } = require('nanoid');
 
 const app = express();
 const server = http.createServer(app);
@@ -34,14 +35,26 @@ wss.on('connection', (ws) => {
                     broadcastGameState();
                 }
             } else if (data.type === 'join') {
-                // Handle new player joining
-                const { player_id } = data;
+                // Generate a new unique player ID
+                const player_id = nanoid(8); // 8-character unique ID
+                
+                // Create new player with generated ID
                 players.set(player_id, {
                     player_id,
                     x: Math.random() * 800, // Random starting position
                     y: Math.random() * 600,
-                    size: 30 // Default size
+                    size: 1 // Default size
                 });
+                
+                // Send the player their ID
+                ws.send(JSON.stringify({
+                    type: 'player_id',
+                    player_id
+                }));
+                
+                // Store the player ID with the WebSocket connection
+                ws.player_id = player_id;
+                
                 broadcastGameState();
             }
         } catch (error) {
@@ -51,7 +64,11 @@ wss.on('connection', (ws) => {
 
     ws.on('close', () => {
         console.log('Client disconnected');
-        // Could add player cleanup here if needed
+        // Remove player from game state when they disconnect
+        if (ws.player_id) {
+            players.delete(ws.player_id);
+            broadcastGameState();
+        }
     });
     
     // Send initial game state to the new client
