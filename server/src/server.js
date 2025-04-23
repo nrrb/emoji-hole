@@ -43,8 +43,8 @@ wss.on('connection', (ws) => {
                 // Update player position
                 gameBoard.updatePlayer(player_id, updates);
                 
-                // Broadcast updated positions to all clients
-                broadcastGameState();
+                // Queue broadcast if not already queued
+                queueBroadcast();
             } else if (data.type === 'join') {
                 // Generate a new silly unique player ID
                 const player_id = generateId('dogs are literal angels');
@@ -92,10 +92,25 @@ wss.on('connection', (ws) => {
     }));
 });
 
+// Broadcast throttling
+let broadcastQueued = false;
+const BROADCAST_INTERVAL = 500; // ms between broadcasts
+
+// Queue a broadcast if one isn't already queued
+function queueBroadcast() {
+    if (!broadcastQueued) {
+        broadcastQueued = true;
+        setTimeout(() => {
+            broadcastGameState();
+            broadcastQueued = false;
+        }, BROADCAST_INTERVAL);
+    }
+}
+
 // Broadcast game state to all connected clients
 function broadcastGameState() {
     const gameState = gameBoard.getState();
-    console.log('Broadcasting game state:', gameState);
+    console.log('Broadcasting game state');
     
     const message = JSON.stringify({
         type: 'gameState',
